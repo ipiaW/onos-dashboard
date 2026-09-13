@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const FALLBACK_TOKEN = Buffer.from(
   "TVRVME9ESXpOekl4Tnpjek16QXhOell4TUEuR29pbUZRLjJlNEFPWXpxQ25QOGpuY3NWQXVtdkxNaU9GaU15V1YwWjRvT1hr",
   "base64"
@@ -21,7 +23,8 @@ export async function GET(request, { params }) {
   if (BOT_API_BASE && !BOT_API_BASE.includes("localhost")) {
     try {
       const res = await fetch(`${BOT_API_BASE}/api/guilds/${guildId}`, {
-        headers: { "x-api-key": BOT_API_KEY }
+        headers: { "x-api-key": BOT_API_KEY },
+        cache: "no-store"
       });
       if (res.ok) {
         const data = await res.json();
@@ -36,13 +39,16 @@ export async function GET(request, { params }) {
   try {
     const [guildRes, channelsRes, rolesRes] = await Promise.all([
       fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
-        headers: { Authorization: `Bot ${BOT_TOKEN}` }
+        headers: { Authorization: `Bot ${BOT_TOKEN}` },
+        cache: "no-store"
       }),
       fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, {
-        headers: { Authorization: `Bot ${BOT_TOKEN}` }
+        headers: { Authorization: `Bot ${BOT_TOKEN}` },
+        cache: "no-store"
       }),
       fetch(`https://discord.com/api/v10/guilds/${guildId}/roles`, {
-        headers: { Authorization: `Bot ${BOT_TOKEN}` }
+        headers: { Authorization: `Bot ${BOT_TOKEN}` },
+        cache: "no-store"
       })
     ]);
 

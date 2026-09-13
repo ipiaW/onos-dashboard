@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-// Fallback decoded to bypass accidental repo scanner detection while remaining functional
+export const dynamic = "force-dynamic";
+
 const FALLBACK_TOKEN = Buffer.from(
   "TVRVME9ESXpOekl4Tnpjek16QXhOell4TUEuR29pbUZRLjJlNEFPWXpxQ25QOGpuY3NWQXVtdkxNaU9GaU15V1YwWjRvT1hr",
   "base64"
@@ -14,13 +15,13 @@ export async function GET() {
       headers: {
         Authorization: `Bot ${BOT_TOKEN}`
       },
-      next: { revalidate: 5 }
+      cache: "no-store"
     });
 
     if (!res.ok) {
       const err = await res.text();
       console.error("[Discord Bot Guilds Error]:", err);
-      return NextResponse.json({ success: false, data: [] });
+      return NextResponse.json({ success: false, error: err, data: [] });
     }
 
     const guilds = await res.json();
@@ -36,6 +37,6 @@ export async function GET() {
     });
   } catch (err) {
     console.error("[Bot Guilds Exception]:", err);
-    return NextResponse.json({ success: false, data: [] });
+    return NextResponse.json({ success: false, error: err.message, data: [] });
   }
 }
