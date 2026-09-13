@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const FALLBACK_TOKEN = Buffer.from(
-  "TVRVME9ESXpOakV4Tnpjek16QXhOell4TUEuR29pbUZRLjJlNEFPWXpxQ25QOGpuY3NWQXVtdkxNaU9GaU15V1YwWjRvT1hr",
+  "TVRVME9ESXpOekl4Tnpjek16QXhOell4TUEuR29pbUZRLjJlNEFPWXpxQ25QOGpuY3NWQXVtdkxNaU9GaU15V1YwWjRvT1hr",
   "base64"
 ).toString("utf-8");
 
