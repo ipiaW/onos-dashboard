@@ -40,7 +40,7 @@ export async function GET(request) {
       const errText = await tokenResponse.text();
       console.error("[OAuth2 Token Error]:", errText);
       return NextResponse.redirect(
-        `${appUrl}/dashboard?auth_error=${encodeURIComponent("Gagal menukar token dengan Discord. Pastikan Redirect URI di Discord Developer Portal sama persis dengan: " + redirectUri)}`
+        `${appUrl}/dashboard?auth_error=${encodeURIComponent("Gagal menukar token (" + errText + "). Pastikan Redirect URI di Discord Developer Portal: " + redirectUri)}`
       );
     }
 
