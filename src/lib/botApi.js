@@ -84,24 +84,69 @@ export async function getGuildDetails(guildId) {
 }
 
 export async function updateAutoMod(guildId, data) {
-  return await fetchWithAuth(`/api/guilds/${guildId}/automod`, {
+  const res = await fetch(`/api/settings/${guildId}`, {
     method: "POST",
-    body: JSON.stringify(data)
-  }).catch(() => ({ success: true, message: "Pengaturan disimpan sementara." }));
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ section: "automod", data })
+  });
+
+  if (API_BASE && !API_BASE.includes("localhost")) {
+    fetchWithAuth(`/api/guilds/${guildId}/automod`, {
+      method: "POST",
+      body: JSON.stringify(data)
+    }).catch(() => {});
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Gagal menyimpan" }));
+    throw new Error(err.error || "Gagal menyimpan pengaturan AutoMod");
+  }
+
+  return await res.json();
 }
 
 export async function updateWelcome(guildId, data) {
-  return await fetchWithAuth(`/api/guilds/${guildId}/welcome`, {
+  const res = await fetch(`/api/settings/${guildId}`, {
     method: "POST",
-    body: JSON.stringify(data)
-  }).catch(() => ({ success: true, message: "Pengaturan disimpan sementara." }));
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ section: "welcome", data })
+  });
+
+  if (API_BASE && !API_BASE.includes("localhost")) {
+    fetchWithAuth(`/api/guilds/${guildId}/welcome`, {
+      method: "POST",
+      body: JSON.stringify(data)
+    }).catch(() => {});
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Gagal menyimpan" }));
+    throw new Error(err.error || "Gagal menyimpan pengaturan Sambutan");
+  }
+
+  return await res.json();
 }
 
 export async function updateLogging(guildId, channelId) {
-  return await fetchWithAuth(`/api/guilds/${guildId}/logging`, {
+  const res = await fetch(`/api/settings/${guildId}`, {
     method: "POST",
-    body: JSON.stringify({ channelId })
-  }).catch(() => ({ success: true, message: "Pengaturan disimpan sementara." }));
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ section: "logging", data: { channelId } })
+  });
+
+  if (API_BASE && !API_BASE.includes("localhost")) {
+    fetchWithAuth(`/api/guilds/${guildId}/logging`, {
+      method: "POST",
+      body: JSON.stringify({ channelId })
+    }).catch(() => {});
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Gagal menyimpan" }));
+    throw new Error(err.error || "Gagal menyimpan pengaturan ModLog");
+  }
+
+  return await res.json();
 }
 
 export async function getMusicStatus(guildId) {

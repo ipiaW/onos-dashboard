@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getGuildConfig } from "../../../../../lib/discordConfigStore";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,14 @@ export async function GET(request, { params }) {
       .filter((r) => r.name !== "@everyone")
       .map((r) => ({ id: r.id, name: r.name, color: r.color }));
 
+    let guildSettings = null;
+    try {
+      const configData = await getGuildConfig(guildId);
+      guildSettings = configData.config;
+    } catch (e) {
+      console.warn("[Could not load guild config]:", e);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -76,7 +85,7 @@ export async function GET(request, { params }) {
         icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null,
         channels: textChannels,
         roles: formattedRoles,
-        settings: {
+        settings: guildSettings || {
           automod: {
             enabled: true,
             antiInvite: true,
