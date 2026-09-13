@@ -1,24 +1,34 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { getGuilds } from "../../lib/botApi";
-import { ShieldCheck, ArrowRight, PlusCircle, LogIn, Lock } from "lucide-react";
+import { ShieldCheck, ArrowRight, PlusCircle, Lock, AlertCircle, Copy, Check } from "lucide-react";
 
-export default function ServerSelector() {
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const authError = searchParams.get("auth_error");
+
   const [auth, setAuth] = useState({ loggedIn: false, user: null, guilds: [] });
   const [botGuilds, setBotGuilds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentOrigin, setCurrentOrigin] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentOrigin(window.location.origin);
+    }
+
     // 1. Cek sesi user Discord
     fetch("/api/auth/me")
-      .then(res => res.json())
-      .then(sessionData => {
+      .then((res) => res.json())
+      .then((sessionData) => {
         setAuth(sessionData);
 
         // 2. Ambil daftar server yang ada bot onoS
         return getGuilds()
-          .then(botRes => {
+          .then((botRes) => {
             if (botRes.success) setBotGuilds(botRes.data);
             setLoading(false);
           })
@@ -28,39 +38,77 @@ export default function ServerSelector() {
   }, []);
 
   const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1548237217733017610";
+  const expectedRedirectUri = `${currentOrigin || "http://localhost:3000"}/api/auth/callback`;
+
+  const copyRedirectUri = () => {
+    navigator.clipboard.writeText(expectedRedirectUri);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Jika belum login ke Discord
   if (!loading && !auth.loggedIn) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-24 text-center space-y-6">
-        <div className="w-16 h-16 rounded-3xl bg-[#5865F2]/10 border border-[#5865F2]/30 text-[#5865F2] flex items-center justify-center mx-auto shadow-lg shadow-[#5865F2]/10">
-          <Lock className="w-8 h-8" />
-        </div>
+      <div className="max-w-2xl mx-auto px-4 py-16 space-y-6">
+        {authError && (
+          <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/40 text-red-200 text-sm flex items-start gap-3 shadow-lg">
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <span className="font-bold block text-white">Gagal Melakukan Login Discord</span>
+              <p className="text-xs text-red-300">{authError}</p>
+            </div>
+          </div>
+        )}
 
-        <div className="space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-black text-white">Login Discord Diperlukan</h1>
-          <p className="text-sm text-neutral-400">
-            Masuk dengan akun Discord Anda untuk mengelola server yang Anda kelola (memiliki izin <i>Manage Server</i> atau <i>Administrator</i>).
-          </p>
-        </div>
+        <div className="p-8 rounded-3xl bg-[#131318] border border-[#23232c] text-center space-y-6 shadow-2xl">
+          <div className="w-16 h-16 rounded-3xl bg-[#5865F2]/10 border border-[#5865F2]/30 text-[#5865F2] flex items-center justify-center mx-auto shadow-lg shadow-[#5865F2]/10">
+            <Lock className="w-8 h-8" />
+          </div>
 
-        <div>
-          <a
-            href="/api/auth/login"
-            className="inline-flex items-center gap-3 px-6 py-3.5 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold text-base transition-all shadow-lg shadow-[#5865F2]/25"
-          >
-            <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
-              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.894a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
-            </svg>
-            Masuk dengan Akun Discord
-          </a>
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-black text-white">Login Discord Diperlukan</h1>
+            <p className="text-sm text-neutral-400 max-w-md mx-auto">
+              Masuk dengan akun Discord Anda untuk mengelola server tempat Anda memiliki hak <i>Administrator</i> atau <i>Manage Server</i>.
+            </p>
+          </div>
+
+          <div>
+            <a
+              href="/api/auth/login"
+              className="inline-flex items-center gap-3 px-8 py-3.5 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold text-base transition-all shadow-lg shadow-[#5865F2]/30 hover:scale-[1.02]"
+            >
+              <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.894a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
+              </svg>
+              Masuk dengan Akun Discord
+            </a>
+          </div>
+
+          <div className="pt-4 border-t border-[#1f1f28] text-left space-y-2">
+            <span className="text-xs font-semibold text-neutral-300 block">
+              💡 Pastikan Redirect URI berikut terdaftar di Discord Developer Portal:
+            </span>
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0d0d12] border border-[#23232c] text-xs font-mono text-neutral-300">
+              <span className="truncate flex-1 text-[#1DB954]">{expectedRedirectUri}</span>
+              <button
+                onClick={copyRedirectUri}
+                className="px-2 py-1 rounded bg-[#1e1e28] hover:bg-[#2b2b3b] text-neutral-200 transition-colors flex items-center gap-1 shrink-0"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-[#1DB954]" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? "Tersalin" : "Salin"}
+              </button>
+            </div>
+            <p className="text-[11px] text-neutral-500">
+              Buka Discord Developer Portal ➔ OAuth2 ➔ Tambahkan URL di atas ke kolom <b>Redirects</b> ➔ Save Changes.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   // Gabungkan server user dengan status bot
-  const botGuildIds = new Set(botGuilds.map(b => b.id));
+  const botGuildIds = new Set(botGuilds.map((b) => b.id));
   const userGuilds = auth.guilds || [];
 
   return (
@@ -83,7 +131,28 @@ export default function ServerSelector() {
         </div>
       )}
 
-      {!loading && (
+      {!loading && userGuilds.length === 0 && (
+        <div className="p-8 rounded-2xl bg-[#14141a] border border-[#23232c] text-center space-y-4 max-w-xl mx-auto">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold text-white">Tidak Ada Server yang Dapat Dikelola</h2>
+          <p className="text-sm text-neutral-400">
+            Akun Discord Anda saat ini belum memiliki izin <b>Administrator</b> atau <b>Manage Server</b> di server manapun.
+            Pastikan Anda telah membuat server sendiri atau ditugaskan sebagai admin oleh pemilik server.
+          </p>
+          <a
+            href="https://discord.com/channels/@me"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block px-5 py-2 rounded-xl bg-[#20202c] hover:bg-[#2b2b3b] text-neutral-200 text-xs font-semibold"
+          >
+            Buka Discord
+          </a>
+        </div>
+      )}
+
+      {!loading && userGuilds.length > 0 && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {userGuilds.map((guild) => {
             const hasBot = botGuildIds.has(guild.id);
@@ -153,5 +222,20 @@ export default function ServerSelector() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ServerSelector() {
+  return (
+    <Suspense
+      fallback={
+        <div className="text-center py-24 text-neutral-400">
+          <div className="w-8 h-8 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          Memuat halaman dashboard...
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 }

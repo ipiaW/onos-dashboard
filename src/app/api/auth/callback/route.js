@@ -1,22 +1,24 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getBaseUrl } from "../../../../lib/authHelper";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const errorDescription = searchParams.get("error_description");
 
-  const host = request.headers.get("host");
-  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+  const appUrl = getBaseUrl(request);
+  const redirectUri = `${appUrl}/api/auth/callback`;
 
+  // Jika user membatalkan / Discord mengembalikan error
   if (error || !code) {
-    return NextResponse.redirect(`${appUrl}/?auth_error=${encodeURIComponent(error || "No code provided")}`);
+    const errorMsg = errorDescription || error || "Tidak ada kode otorisasi dari Discord";
+    return NextResponse.redirect(`${appUrl}/dashboard?auth_error=${encodeURIComponent(errorMsg)}`);
   }
 
   const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1548237217733017610";
-  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-  const redirectUri = `${appUrl}/api/auth/callback`;
+  const clientSecret = process.env.DISCORD_CLIENT_SECRET || "8l_CiWHdnE8CqQIljW4jt9f0mEf7vY1c";
 
   try {
     // 1. Tukar authorization code dengan access token
@@ -35,9 +37,11 @@ export async function GET(request) {
     });
 
     if (!tokenResponse.ok) {
-      const errData = await tokenResponse.text();
-      console.error("[OAuth2 Token Error]:", errData);
-      return NextResponse.redirect(`${appUrl}/?auth_error=token_exchange_failed`);
+      const errText = await tokenResponse.text();
+      console.error("[OAuth2 Token Error]:", errText);
+      return NextResponse.redirect(
+        `${appUrl}/dashboard?auth_error=${encodeURIComponent("Gagal menukar token dengan Discord. Pastikan Redirect URI di Discord Developer Portal sama persis dengan: " + redirectUri)}`
+      );
     }
 
     const tokenData = await tokenResponse.json();
@@ -47,13 +51,18 @@ export async function GET(request) {
     const userResponse = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
+    
+    if (!userResponse.ok) {
+      return NextResponse.redirect(`${appUrl}/dashboard?auth_error=Gagal_mengambil_profil_user`);
+    }
+    
     const userData = await userResponse.json();
 
     // 3. Ambil daftar server pengguna (@me/guilds)
     const guildsResponse = await fetch("https://discord.com/api/users/@me/guilds", {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
-    const guildsData = await guildsResponse.json();
+    const guildsData = guildsResponse.ok ? await guildsResponse.json() : [];
 
     // Filter server yang bisa dikelola (memiliki izin Manage Guild atau Administrator atau Owner)
     // Manage Guild: 0x20 (32), Administrator: 0x8 (8)
@@ -91,11 +100,12 @@ export async function GET(request) {
       guilds: manageableGuilds
     };
 
-    // 4. Simpan session ke cookie yang aman
+    // 4. Simpan session ke cookie
+    const isLocal = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
     const cookieStore = cookies();
     cookieStore.set("onos_session", JSON.stringify(sessionPayload), {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: !isLocal && (process.env.NODE_ENV === "production"),
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7 // 7 hari
@@ -104,6 +114,6 @@ export async function GET(request) {
     return NextResponse.redirect(`${appUrl}/dashboard`);
   } catch (err) {
     console.error("[OAuth2 Callback Exception]:", err);
-    return NextResponse.redirect(`${appUrl}/?auth_error=exception`);
+    return NextResponse.redirect(`${appUrl}/dashboard?auth_error=${encodeURIComponent(err.message || "Exception saat login")}`);
   }
 }
